@@ -4,7 +4,7 @@ from optimization import get_optimal_vector
 from inference import tag_all_test
 
 
-def main():
+def learn():
     threshold = 1
     lam = 1
 
@@ -25,5 +25,21 @@ def main():
     tag_all_test(test_path, pre_trained_weights, feature2id, predictions_path)
 
 
+def main():
+    train_path = "train1.wtag"
+    test_path = "comp1.words"
+
+    weights_path = 'weights.pkl'
+    predictions_path = 'predictions.wtag'
+
+    with open(weights_path, 'rb') as f:
+        optimal_params, feature2id = pickle.load(f)
+    pre_trained_weights = optimal_params[0]
+
+    print(pre_trained_weights)
+    tag_all_test(test_path, pre_trained_weights, feature2id, predictions_path)
+
+
 if __name__ == '__main__':
+    # learn()
     main()

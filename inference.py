@@ -46,13 +46,10 @@ def memm_viterbi(sentence, pre_trained_weights, feature2id):
                 max_u_v = (key[1], key[2])
 
     (sentence_tags[n - 2], sentence_tags[n - 1]) = (max_u_v[0], max_u_v[1])
-    print(sentence_tags)
 
-    for k in range(n - 3, -1, -1):
-        print(k)
-        sentence_tags.append(bp[(k + 2, sentence_tags[k + 1], sentence_tags[k + 2])])
-
-    return sentence_tags
+    for k in range(n - 3, 0, -1):
+        sentence_tags[k] = bp[(k + 2, sentence_tags[k + 1], sentence_tags[k + 2])]
+    return sentence_tags[1:]
 
 
 def q(v, t, u, pre_trained_weights, sentence, feature2id, k, tags):
@@ -92,8 +89,10 @@ def tag_all_test(test_path, pre_trained_weights, feature2id, predictions_path):
 
     for k, sen in tqdm(enumerate(test), total=len(test)):
         sentence = sen[0]
+        print("length of sentence: ", len(sentence))
         pred = memm_viterbi(sentence, pre_trained_weights, feature2id)[1:]
         sentence = sentence[2:]
+        print("length of sentence: ", len(sentence))
         for i in range(len(pred)):
             if i > 0:
                 output_file.write(" ")
