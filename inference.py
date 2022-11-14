@@ -88,39 +88,36 @@ def memm_viterbi_with_beam_search(sentence, pre_trained_weights, feature2id):
     pi, bp, beam_dict = init_pi_bp_beam_dict(n, tags)
     beam_size = 2
     for k in range(2, n):
+        list_of_probs = []
         if k == 2:
-            u = "*"
-            t = "*"
-            list_of_probs = []
-            for v in tags:
-                current = pi[(k - 1, t, u)] * q(v, t, u, pre_trained_weights, sentence,
-                                                    feature2id, k, tags)
+            u = "*"  # the first tag
+            t = "*"  # tag of the word before the first word
+            for v in tags: # iterating over the tags of the current word
+                q_value = q(v, t, u, pre_trained_weights, sentence, feature2id, k, tags)  # q(v|t,u)
+                current = pi[(k - 1, t, u)] * q_value  # calculation of current probability
                 pi[(k, u, v)] = current
                 bp[(k, u, v)] = t
                 list_of_probs.append((current, v))
-            max_probs_and_labels = sorted(list_of_probs)[-beam_size:]
-            beam_dict[k] = [x[1] for x in max_probs_and_labels]
+            max_probs_and_labels = sorted(list_of_probs)[-beam_size:]  # pruning with beam search
+            beam_dict[k] = [x[1] for x in max_probs_and_labels]  # saving the labels of the beam
         else:
-            for u in beam_dict[k-1]:
-                for v in tags:
-                    max_prob = -np.inf
-                    arg_max_prob = ""
-                    for t in beam_dict[k-2]:
-                        current = pi[(k - 1, t, u)] * q(v, t, u, pre_trained_weights, sentence,
-                                                        feature2id, k, tags)
-                        if current > max_prob:
+            for u in beam_dict[k-1]:  # iterating over the tags of the previous word according to the beam search
+                for v in tags:  # iterating over the tags of the current word
+                    max_prob = 0  # initialization of the max probability
+                    arg_max_prob = ""  # initialization of the label of the max probability
+                    for t in beam_dict[k-2]:  # iterating over the tags of the word before the previous word
+                        q_value = q(v, t, u, pre_trained_weights, sentence, feature2id, k, tags)  # q(v|t,u)
+                        current = pi[(k - 1, t, u)] * q_value  # calculation of current probability
+
+                        if current > max_prob: # updating the max probability and the label of the max probability
                             max_prob = current
                             arg_max_prob = t
 
-                    pi[(k, u, v)] = max_prob
-                    bp[(k, u, v)] = arg_max_prob
+                    pi[(k, u, v)] = max_prob  # updating pi
+                    bp[(k, u, v)] = arg_max_prob  # updating bp
+                    list_of_probs.append((max_prob, v))  # saving the probabilities and the labels
 
-            list_of_probs = []
-            for u in beam_dict[k-1]:
-                for v in tags:
-                    list_of_probs.append((pi[(k, u, v)], v))
-            max_probs_and_labels = sorted(list_of_probs)[-beam_size:]
-            beam_dict[k] = [x[1] for x in max_probs_and_labels]
+            beam_dict[k] = [x[1] for x in sorted(list_of_probs)[-beam_size:]]  # pruning with beam search
 
     max_u_v = find_max_u_v(pi,n)
     (tags_pred[n - 2], tags_pred[n - 1]) = (max_u_v[0], max_u_v[1])
@@ -149,13 +146,9 @@ def q(v, t, u, pre_trained_weights, sentence, feature2id, k, tags):
 
         if history not in feature2id.histories_features.keys():
             features = represent_input_with_features(history, feature2id.feature_to_idx)
-            current_calc = np.exp(np.dot(pre_trained_weights,
-                                         features_list_to_binary_vector(features,
-                                                                        feature2id.n_total_features)))
         else:
-            current_calc = np.exp(np.dot(pre_trained_weights,
-                                         features_list_to_binary_vector(feature2id.histories_features[history],
-                                                                        feature2id.n_total_features)))
+            features = feature2id.histories_features[history]
+        current_calc = np.exp(sum([pre_trained_weights[feature] for feature in features]))
         if tag == v:
             nominator = current_calc
         denominator += current_calc
@@ -187,7 +180,7 @@ def create_indices_of_tags(tags):
         tag_to_index[tag] = index
     return tag_to_index
 
-
+#not in use
 def features_list_to_binary_vector(features_indices, total_features):
     binary_vector = np.zeros(total_features)
     for feature_idx in features_indices:
